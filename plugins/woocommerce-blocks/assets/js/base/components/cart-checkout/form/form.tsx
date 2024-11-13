@@ -14,18 +14,19 @@ import {
 	BillingStateInput,
 	ShippingStateInput,
 } from '@woocommerce/base-components/state-input';
-import { useEffect, useMemo, useRef } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import { useInstanceId } from '@wordpress/compose';
 import { useShallowEqual } from '@woocommerce/base-hooks';
 import isShallowEqual from '@wordpress/is-shallow-equal';
 import clsx from 'clsx';
 import { AddressFormValues, ContactFormValues } from '@woocommerce/settings';
 import { objectHasProp } from '@woocommerce/types';
+import { useCheckoutBlockContext } from '@woocommerce/blocks/checkout/context';
 
 /**
  * Internal dependencies
  */
-import { AddressFormProps, AddressFormFields } from './types';
+import { AddressFormProps } from './types';
 import prepareFormFields from './prepare-form-fields';
 import validateCountry from './validate-country';
 import customValidationHandler from './custom-validation-handler';
@@ -52,6 +53,7 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 }: AddressFormProps< T > ): JSX.Element => {
 	const instanceId = useInstanceId( Form );
 	const isFirstRender = useRef( true );
+	const { defaultFields } = useCheckoutBlockContext();
 
 	// Track incoming props.
 	const currentFields = useShallowEqual( fields );
@@ -59,20 +61,14 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 		objectHasProp( values, 'country' ) ? values.country : ''
 	);
 
-	// Memoize the address form fields passed in from the parent component.
-	const addressFormFields = useMemo( (): AddressFormFields => {
-		const preparedFields = prepareFormFields(
-			currentFields,
-			{},
-			currentCountry
-		);
-		return {
-			fields: preparedFields,
-			addressType,
-			required: preparedFields.filter( ( field ) => field.required ),
-			hidden: preparedFields.filter( ( field ) => field.hidden ),
-		};
-	}, [ currentFields, currentCountry, addressType ] );
+	const addressFormFields = prepareFormFields(
+		currentFields,
+		defaultFields,
+		currentCountry
+	);
+	const addressFormFieldsString = JSON.stringify( addressFormFields );
+	const hiddenFields = addressFormFields.filter( ( field ) => field.hidden );
+	const hiddenFieldsString = JSON.stringify( hiddenFields );
 
 	// Stores refs for rendered fields so we can access them later.
 	const fieldsRef = useRef<
@@ -84,13 +80,13 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 		const newValues = {
 			...values,
 			...Object.fromEntries(
-				addressFormFields.hidden.map( ( field ) => [ field.key, '' ] )
+				hiddenFields.map( ( field ) => [ field.key, '' ] )
 			),
 		};
 		if ( ! isShallowEqual( values, newValues ) ) {
 			onChange( newValues );
 		}
-	}, [ onChange, addressFormFields, values ] );
+	}, [ onChange, hiddenFields, hiddenFieldsString, values ] );
 
 	// Maybe validate country and state when other fields change so user is notified that they're required.
 	useEffect( () => {
@@ -99,7 +95,7 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 		}
 
 		if ( objectHasProp( values, 'state' ) ) {
-			const stateField = addressFormFields.fields.find(
+			const stateField = addressFormFields.find(
 				( f ) => f.key === 'state'
 			);
 
@@ -107,7 +103,7 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 				validateState( addressType, values, stateField );
 			}
 		}
-	}, [ values, addressType, addressFormFields ] );
+	}, [ values, addressType, addressFormFields, addressFormFieldsString ] );
 
 	// Changing country may change format for postcodes.
 	useEffect( () => {
@@ -119,7 +115,7 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 		let timeoutId: ReturnType< typeof setTimeout >;
 
 		if ( ! isFirstRender.current && isEditing && fieldsRef.current ) {
-			const firstField = addressFormFields.fields.find(
+			const firstField = addressFormFields.find(
 				( field ) => field.hidden === false
 			);
 
@@ -147,14 +143,21 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 		return () => {
 			clearTimeout( timeoutId );
 		};
-	}, [ isEditing, addressFormFields, id, instanceId, addressType ] );
+	}, [
+		isEditing,
+		addressFormFields,
+		addressFormFieldsString,
+		id,
+		instanceId,
+		addressType,
+	] );
 
 	id = id || `${ instanceId }`;
 
 	return (
 		<div id={ id } className="wc-block-components-address-form">
-			{ addressFormFields.fields.map( ( field ) => {
-				if ( field.hidden ) {
+			{ addressFormFields.map( ( field ) => {
+				if ( !! field.hidden ) {
 					return null;
 				}
 
@@ -187,12 +190,12 @@ const Form = < T extends AddressFormValues | ContactFormValues >( {
 				if ( field.key === 'address_1' ) {
 					const address1 = getFieldData(
 						'address_1',
-						addressFormFields.fields,
+						addressFormFields,
 						values
 					);
 					const address2 = getFieldData(
 						'address_2',
-						addressFormFields.fields,
+						addressFormFields,
 						values
 					);
 
