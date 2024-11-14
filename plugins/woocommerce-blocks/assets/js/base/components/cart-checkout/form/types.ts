@@ -28,8 +28,6 @@ export interface AddressFormProps< T > {
 	addressType?: FormType;
 	// Array of fields in form.
 	fields: ( keyof FormFields )[];
-	// Default fields for the form as defined on the server.
-	defaultFields: FormFields;
 	// Called with the new address data when the address form changes. This is only called when all required fields are filled and there are no validation errors.
 	onChange: ( newValue: AddressFormValues | ContactFormValues ) => void;
 	// Values for fields.
