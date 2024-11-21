@@ -308,7 +308,7 @@
 	"peerDependencies": {
 		"react": "18.3.x",
 		"react-dom": "18.3.x",
-		"@wordpress/data": "wp-6.0"
+		"@wordpress/data": "wp-6.6"
 	},
 	"optionalDependencies": {
 		"ndb": "1.1.5"
