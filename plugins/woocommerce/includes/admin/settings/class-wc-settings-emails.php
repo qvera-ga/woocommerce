@@ -46,6 +46,7 @@ class WC_Settings_Emails extends WC_Settings_Page {
 		add_action( 'woocommerce_admin_field_email_notification', array( $this, 'email_notification_setting' ) );
 		add_action( 'woocommerce_admin_field_email_preview', array( $this, 'email_preview' ) );
 		add_action( 'woocommerce_admin_field_email_image_url', array( $this, 'email_image_url' ) );
+		add_action( 'woocommerce_admin_field_email_font_family', array( $this, 'email_font_family' ) );
 		parent::__construct();
 	}
 
@@ -156,29 +157,14 @@ class WC_Settings_Emails extends WC_Settings_Page {
 				),
 			);
 
-			$additional_fonts = array();
-			if ( wc_current_theme_is_fse_theme() && class_exists( 'WP_Font_Face_Resolver' ) ) {
-				$theme_fonts = WP_Font_Face_Resolver::get_fonts_from_theme_json();
-				if ( count( $theme_fonts ) > 0 ) {
-					foreach ( $theme_fonts as $font ) {
-						if ( ! empty( $font[0]['font-family'] ) ) {
-							$additional_fonts[ $font[0]['font-family'] ] = $font[0]['font-family'];
-						}
-					}
-					ksort( $additional_fonts );
-				}
-			}
 			$font_family = array(
 				'title'    => __( 'Font family', 'woocommerce' ),
 				'id'       => 'woocommerce_email_font_family',
 				'desc_tip' => '',
 				'default'  => 'Arial',
-				'type'     => 'select',
-				'class'    => 'wc-enhanced-select',
-				'options'  => array_merge(
-					array_combine( array_keys( self::$font ), array_keys( self::$font ) ),
-					$additional_fonts
-				),
+				'type'     => 'email_font_family',
+				'class'    => '',
+				'options'  => $this->get_available_fonts(),
 			);
 
 			/* translators: %s: Available placeholders for use */
@@ -447,6 +433,31 @@ class WC_Settings_Emails extends WC_Settings_Page {
 	}
 
 	/**
+	 * Get available fonts for emails.
+	 */
+	public function get_available_fonts() {
+		$additional_fonts = array();
+		if ( wc_current_theme_is_fse_theme() && class_exists( 'WP_Font_Face_Resolver' ) ) {
+			$theme_fonts = WP_Font_Face_Resolver::get_fonts_from_theme_json();
+			if ( count( $theme_fonts ) > 0 ) {
+				foreach ( $theme_fonts as $font ) {
+					if ( ! empty( $font[0]['font-family'] ) ) {
+						$additional_fonts[ $font[0]['font-family'] ] = $font[0]['font-family'];
+					}
+				}
+			}
+		}
+
+		$available_fonts = array_merge(
+			array_combine( array_keys( self::$font ), array_keys( self::$font ) ),
+			$additional_fonts
+		);
+		ksort( $available_fonts );
+
+		return $available_fonts;
+	}
+
+	/**
 	 * Output the settings.
 	 */
 	public function output() {
@@ -641,6 +652,54 @@ class WC_Settings_Emails extends WC_Settings_Page {
 					data-id="<?php echo esc_attr( $value['id'] ); ?>"
 					data-image-url="<?php echo esc_attr( $option_value ); ?>"
 				></div>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Creates the email font family field with custom font family applied to each option.
+	 *
+	 * @param array $value Field value array.
+	 */
+	public function email_font_family( $value ) {
+		$option_value = $value['value'];
+
+		?>
+		<tr class="<?php echo esc_attr( $value['row_class'] ); ?>">
+			<th scope="row" class="titledesc">
+				<label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?> <?php echo wc_help_tip( $value['desc'] ); // WPCS: XSS ok. ?></label>
+			</th>
+			<td class="forminp forminp-<?php echo esc_attr( sanitize_title( $value['type'] ) ); ?>">
+				<select
+					name="<?php echo esc_attr( $value['field_name'] ); ?><?php echo ( 'multiselect' === $value['type'] ) ? '[]' : ''; ?>"
+					id="<?php echo esc_attr( $value['id'] ); ?>"
+					style="<?php echo esc_attr( $value['css'] ); ?>"
+					class="<?php echo esc_attr( $value['class'] ); ?>"
+					<?php echo 'multiselect' === $value['type'] ? 'multiple="multiple"' : ''; ?>
+					>
+					<?php
+					foreach ( $value['options'] as $key => $val ) {
+						$font_family = self::$font[ $key ] ?? $key;
+						$style       = sprintf( 'font-family: %s; font-size: 1.4em;', $font_family );
+						?>
+						<option
+							value="<?php echo esc_attr( $key ); ?>"
+							style="<?php echo esc_attr( $style ); ?>"
+							<?php
+
+							if ( is_array( $option_value ) ) {
+								selected( in_array( (string) $key, $option_value, true ), true );
+							} else {
+								selected( $option_value, (string) $key );
+							}
+
+							?>
+						><?php echo esc_html( $val ); ?></option>
+						<?php
+					}
+					?>
+				</select>
 			</td>
 		</tr>
 		<?php
