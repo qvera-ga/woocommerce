@@ -72,11 +72,9 @@ test.describe( 'General tab', { tag: '@gutenberg' }, () => {
 				.getByText( 'Grouped product' )
 				.click();
 
-			await page.waitForResponse(
-				( response ) =>
-					response.url().includes( '/wp-json/wc/v3/products/' ) &&
-					response.status() === 200
-			);
+			await expect(
+				page.getByLabel( 'Dismiss this notice' )
+			).toContainText( 'Product type changed.' );
 
 			await page
 				.locator( '[data-title="Product section"]' )
