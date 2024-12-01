@@ -172,6 +172,10 @@ class WC_Product_Variation extends WC_Product_Simple {
 			$data = $this->get_variation_attributes();
 		}
 
+        if ( ! is_array( $data ) ) {
+			return $url;
+		}
+		
 		$data = array_filter( $data, 'wc_array_filter_default_attributes' );
 
 		if ( empty( $data ) ) {
