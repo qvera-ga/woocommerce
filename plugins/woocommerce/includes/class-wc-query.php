@@ -515,8 +515,9 @@ class WC_Query {
 	public function product_query( $q ) {
 		if ( ! is_feed() ) {
 			$ordering = $this->get_catalog_ordering_args();
-			$q->set( 'orderby', $ordering['orderby'] );
-			$q->set( 'order', $ordering['order'] );
+
+			$q->set( 'orderby', $ordering['orderby'] ?? null );
+			$q->set( 'order', $ordering['order'] ?? null );
 
 			if ( isset( $ordering['meta_key'] ) ) {
 				$q->set( 'meta_key', $ordering['meta_key'] );
